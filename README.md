@@ -35,6 +35,15 @@ Point(x=1, y=2, z=1)
 'euclidean'
 ```
 
+`q` assumes everything is a field until told otherwise, so one can re-order above to the equivalent definition:
+```py
+>>> class Point(q):
+...     x, y
+...     z = 1
+...     __attrs__
+...     metric = "euclidean"
+```
+
 One can provide a context for the class to use names defined elsewhere (typically, names not found in the class' namespace would be added as a field with no default value):
 ```py
 >>> z = 100
