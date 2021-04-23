@@ -17,27 +17,33 @@ def separate(fields):
 
 class AutoDict(dict):
     def __init__(self, context):
-        super().__init__( __fields={} )  # Treating `__fields` as an ordered-set, i.e., its values are irrelevant
+        super().__init__()
+        self.fields = {}
         self.__context = context or {}
         self.__add_to = FIELDS
 
     def __setitem__(self, key, value):
         if self.__add_to == FIELDS and not ( key.startswith('__') and key.endswith('__') ):
-            self['__fields'][key] = value
+            self.fields[key] = value
         else:
             super().__setitem__(key, value)
 
     def __missing__(self, key):
         if key in (CLASS_ATTRS, FIELDS):
             self.__add_to = key
-        elif key.startswith('__') and key.endswith('__'):
+            return
+
+        if key.startswith('__') and key.endswith('__'):
             raise KeyError(key)
-        elif key in self.__context:
+
+        if key in self.__context:
             return self.__context[key]
-        elif self.__add_to == FIELDS:
+
+        if self.__add_to == FIELDS:
             self[key] = NO_DEFAULT
-        else:
-            raise SyntaxError(f'class attribute `{key}` must be assigned some value')
+            return NO_DEFAULT
+
+        raise SyntaxError(f'class attribute `{key}` must be assigned some value')
 
 
 class qMeta(type):
@@ -45,16 +51,15 @@ class qMeta(type):
         return AutoDict(context)
 
     def __new__(meta, name, bases, namespace, context=None):
-        namespace['__fields__'] = attrs = {}
-        for base in bases:
-            attrs |= getattr(base, '__fields__', {})
-        attrs |= namespace['__fields']  # __fields != __fields__
-        del namespace['__fields']
+        namespace['__fields__'] = fields = {}
+        for base in reversed(bases):
+            fields |= getattr(base, '__fields__', {})
+        fields |= namespace.fields
 
-        no_defaults, defaults = separate(attrs)
+        no_defaults, defaults = separate(fields)
         all_args = no_defaults + list(defaults)
 
-        if attrs and '__init__' not in namespace:
+        if fields and '__init__' not in namespace:
             positional_args = ', '.join(no_defaults)
             default_args = ', '.join(f'{arg}={val!r}' for arg, val in defaults.items())
             init_header = f'def __init__(self, {(positional_args + ", ") if no_defaults else ""}{default_args}):\n'
