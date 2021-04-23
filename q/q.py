@@ -37,7 +37,7 @@ class AutoDict(dict):
         elif self.__add_to == FIELDS:
             self[key] = NO_DEFAULT
         else:
-            raise SyntaxError(f'class attribute {key} must be assigned some value')
+            raise SyntaxError(f'class attribute `{key}` must be assigned some value')
 
 
 class qMeta(type):
