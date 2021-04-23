@@ -57,15 +57,15 @@ class qMeta(type):
         if attrs and '__init__' not in namespace:
             positional_args = ', '.join(no_defaults)
             default_args = ', '.join(f'{arg}={val!r}' for arg, val in defaults.items())
-            init_header = f'def __init__(self, {(positional_args + ", ") if no_defaults else ""} {default_args}):\n'
+            init_header = f'def __init__(self, {(positional_args + ", ") if no_defaults else ""}{default_args}):\n'
             init_body = '\n'.join(f'    self.{attr}={attr}' for attr in all_args)
-            exec(init_header + init_body, namespace)
+            exec(init_header + init_body, globals(), namespace)
 
         if '__repr__' not in namespace:
             repr_header = 'def __repr__(self):\n'
             args = ', '.join(f'{attr}={{self.{attr}!r}}' for attr in all_args)
             repr_body = f'    return f"{name}({args})"'
-            exec(repr_header + repr_body, namespace)
+            exec(repr_header + repr_body, globals(), namespace)
 
         return super().__new__(meta, name, bases, namespace)
 
