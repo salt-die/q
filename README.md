@@ -44,12 +44,25 @@ Point(x=1, y=2, z=1)
 ...     metric = "euclidean"
 ```
 
-One can provide a context for the class to use names defined elsewhere (typically, names not found in the class' namespace would be added as a field with no default value):
+Typically, names not found in the class' namespace would be added as a field with no default value. This can create some surprising behavior:
 ```py
->>> z = 100
+>>> default_z = 100
+>>> class Point(q):
+...     x, y
+...     z = default_z
+...
+>>> Point(1, 2)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: __init__() missing 2 required positional arguments: 'default_z' and 'z'
+```
+
+We can remedy this by providing a context:
+```py
+>>> default_z = 100
 >>> class Point(q, context=globals()):
 ...     x, y
-...     z = z
+...     z = default_z
 ...
 >>> Point(1, 2)
 Point(x=1, y=2, z=100)
