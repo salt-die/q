@@ -45,10 +45,10 @@ class qMeta(type):
         return AutoDict(context)
 
     def __new__(meta, name, bases, namespace, context=None):
-        namespace['__fields__'] = attrs = {
-            key: value for base in bases for key, value in getattr(base, '__fields__', {}).items()
-        }
-        attrs |= namespace['__fields']  # `__fields` != `__fields__`
+        namespace['__fields__'] = attrs = {}
+        for base in bases:
+            attrs |= getattr(base, '__fields__', {})
+        attrs |= namespace['__fields']  # __fields != __fields__
         del namespace['__fields']
 
         no_defaults, defaults = separate(attrs)
