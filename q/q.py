@@ -1,4 +1,4 @@
-NO_DEFAULT = type('', (), {'__repr__': lambda self: 'NO_DEFAULT'})()  # This sentinal object demarcates fields with no default values;
+NO_DEFAULT = type('', (), {'__repr__': lambda self: 'NO_DEFAULT'})()  # This sentinal object identifies fields with no default values;
                                                                       # it has a slightly more useful repr than `object()`.
 CLASS_ATTRS, FIELDS = '__attrs__', '__fields__'  # These are used to demarcate class attributes from default field values in the class body
 
