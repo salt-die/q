@@ -62,10 +62,9 @@ class qMeta(type):
             exec(init_header + init_body, globals(), namespace)
 
         if '__repr__' not in namespace:
-            repr_header = 'def __repr__(self):\n'
             args = ', '.join(f'{attr}={{self.{attr}!r}}' for attr in all_args)
-            repr_body = f'    return f"{name}({args})"'
-            exec(repr_header + repr_body, globals(), namespace)
+            repr_ = f'def __repr__(self):\n    return f"{name}({args})"'
+            exec(repr_, globals(), namespace)
 
         return super().__new__(meta, name, bases, namespace)
 
