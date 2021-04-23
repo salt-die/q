@@ -3,11 +3,26 @@ NO_DEFAULT = type('', (), {'__repr__': lambda self: 'NO_DEFAULT'})()  # This sen
 RESERVED = _, FIELDS = '__attrs__', '__fields__'  # These are used to demarcate class attributes from default field values in the class body
 
 def reorder(fields):
-    """Reorder the fields so that fields with no default values come first.
+    """
+    Reorder the fields so that fields with no default values come first.
+    Order between non-default value fields and default value fields is maintained otherwise.
     """
     no_defaults = {field: default for field, default in fields.items() if default is NO_DEFAULT}
     defaults = {field: default for field, default in fields.items() if default is not NO_DEFAULT}
     return no_defaults | defaults
+
+def init_source(fields):
+    """Returns the source for a default __init__
+    """
+    args = ', '.join(field if default is NO_DEFAULT else f'{field}={default!r}' for field, default in fields.items())
+    body = '\n'.join(f'    self.{field} = {field}' for field in fields)
+    return f'def __init__(self, {args}):\n{body}'
+
+def repr_source(fields):
+    """Returns the source for a default __repr__
+    """
+    attrs = ', '.join(f'{field}={{self.{field}!r}}' for field in fields)
+    return f'def __repr__(self):\n    return f"{{type(self).__name__}}({attrs})"'
 
 def is_dunder(method):
     return method.startswith('__') and method.endswith('__')
@@ -56,21 +71,14 @@ class qMeta(type):
         fields |= namespace.fields
         namespace['__fields__'] = fields = reorder(fields)
 
-        # Default __init__
         if fields and '__init__' not in namespace:
-            args = ', '.join(field if default is NO_DEFAULT else f'{field}={default!r}' for field, default in fields.items())
-            body = '\n'.join(f'    self.{field} = {field}' for field in fields)
-            init = f'def __init__(self, {args}):\n{body}'
-            exec(init, globals(), namespace)
+            exec(init_source(fields), globals(), namespace)
 
-        # Default __repr__
         if '__repr__' not in namespace:
-            attrs = ', '.join(f'{field}={{self.{field}!r}}' for field in fields)
-            repr_ = f'def __repr__(self):\n    return f"{name}({attrs})"'
-            exec(repr_, globals(), namespace)
+            exec(repr_source(fields), globals(), namespace)
 
-        # We encourage you to add your own default methods as needed.  This code is short enough to be easily maintainable by you!
-        # Copy it to your project and hack away!
+        # Add additional default methods as needed!
+
         return super().__new__(meta, name, bases, namespace)
 
 
