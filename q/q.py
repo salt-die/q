@@ -2,17 +2,12 @@ NO_DEFAULT = type('', (), {'__repr__': lambda self: 'NO_DEFAULT'})()  # This sen
                                                                       # it has a slightly more useful repr than `object()`.
 RESERVED = _, FIELDS = '__attrs__', '__fields__'  # These are used to demarcate class attributes from default field values in the class body
 
-def separate(fields):
-    """Separate fields with no default values from fields with default values.
+def reorder(fields):
+    """Reorder the fields so that fields with no default values come first.
     """
-    no_defaults = []
-    defaults = {}
-    for field, default in fields.items():
-        if default is NO_DEFAULT:
-            no_defaults.append(field)
-        else:
-            defaults[field] = default
-    return no_defaults, defaults
+    no_defaults = {field: default for field, default in fields.items() if default is NO_DEFAULT}
+    defaults = {field: default for field, default in fields.items() if default is not NO_DEFAULT}
+    return no_defaults | defaults
 
 def is_dunder(method):
     return method.startswith('__') and method.endswith('__')
@@ -55,26 +50,23 @@ class qMeta(type):
         return _q_namespace(context)
 
     def __new__(meta, name, bases, namespace, context=None):
-        namespace['__fields__'] = fields = {}
+        fields = { }
         for base in reversed(bases):
-            fields |= getattr(base, '__fields__', {})
+            fields |= getattr(base, '__fields__', { })
         fields |= namespace.fields
-
-        no_defaults, defaults = separate(fields)
-        all_args = no_defaults + list(defaults)
+        namespace['__fields__'] = fields = reorder(fields)
 
         # Default __init__
         if fields and '__init__' not in namespace:
-            positional_args = ', '.join(no_defaults)
-            default_args = ', '.join(f'{arg}={val!r}' for arg, val in defaults.items())
-            init_header = f'def __init__(self, {(positional_args + ", ") if no_defaults else ""}{default_args}):\n'
-            init_body = '\n'.join(f'    self.{attr}={attr}' for attr in all_args)
-            exec(init_header + init_body, globals(), namespace)
+            args = ', '.join(field if default is NO_DEFAULT else f'{field}={default!r}' for field, default in fields.items())
+            body = '\n'.join(f'    self.{field} = {field}' for field in fields)
+            init = f'def __init__(self, {args}):\n{body}'
+            exec(init, globals(), namespace)
 
         # Default __repr__
         if '__repr__' not in namespace:
-            args = ', '.join(f'{attr}={{self.{attr}!r}}' for attr in all_args)
-            repr_ = f'def __repr__(self):\n    return f"{name}({args})"'
+            attrs = ', '.join(f'{field}={{self.{field}!r}}' for field in fields)
+            repr_ = f'def __repr__(self):\n    return f"{name}({attrs})"'
             exec(repr_, globals(), namespace)
 
         # We encourage you to add your own default methods as needed.  This code is short enough to be easily maintainable by you!
