@@ -31,29 +31,28 @@ def is_dunder(method):
 class _q_namespace(dict):
     def __init__(self, context):
         super().__init__()
-        self.fields = {}
-        self.__context = context or {}
-        self.__collecting_fields = True
+        self.fields = { }
+        self._context = context or { }
+        self._collecting_fields = True
 
     def __setitem__(self, key, value):
-        if self.__collecting_fields and not is_dunder(key):
+        if self._collecting_fields and not is_dunder(key) and not callable(value):
             self.fields[key] = value
         else:
             super().__setitem__(key, value)
 
     def __missing__(self, key):
         if key in RESERVED:
-            self.__collecting_fields = key == FIELDS
+            self._collecting_fields = key == FIELDS
             return
 
-        if is_dunder(key):  # We allow python to add dunder methods by raising a KeyError.
-                            # Consequently, fields can't be dunder-ed.
+        if is_dunder(key):
             raise KeyError(key)
 
-        if key in self.__context:
-            return self.__context[key]
+        if key in self._context:
+            return self._context[key]
 
-        if self.__collecting_fields:
+        if self._collecting_fields:
             self[key] = NO_DEFAULT
             return NO_DEFAULT
 
@@ -76,8 +75,6 @@ class qMeta(type):
 
         if '__repr__' not in namespace:
             exec(repr_source(fields), globals(), namespace)
-
-        # Add additional default methods as needed!
 
         return super().__new__(meta, name, bases, namespace)
 
