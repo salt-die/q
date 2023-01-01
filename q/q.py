@@ -1,14 +1,16 @@
-NO_DEFAULT = type('', (), {'__repr__': lambda self: 'NO_DEFAULT'})()  # This sentinal object identifies fields with no default values;
-                                                                      # it has a slightly more useful repr than `object()`.
-RESERVED = _, FIELDS = '__attrs__', '__fields__'  # These are used to demarcate class attributes from default field values in the class body
+from collections import ChainMap
+
+NO_DEFAULT = object()
+RESERVED = ATTRS, FIELDS = '__attrs__', '__fields__'  # These are used to demarcate class attributes from default field values in the class body
 
 def reorder(fields):
     """
     Reorder the fields so that fields with no default values come first.
     Order between non-default value fields and default value fields is maintained otherwise.
     """
-    no_defaults = {field: default for field, default in fields.items() if default is NO_DEFAULT}
-    defaults = {field: default for field, default in fields.items() if default is not NO_DEFAULT}
+    no_defaults, defaults = {}, {}
+    for field, default in fields.items():
+        (no_defaults if default is NO_DEFAULT else defaults)[field] = default
     return no_defaults | defaults
 
 def init_source(fields):
@@ -64,11 +66,9 @@ class qMeta(type):
         return _q_namespace(context)
 
     def __new__(meta, name, bases, namespace, context=None):
-        fields = { }
-        for base in reversed(bases):
-            fields |= getattr(base, '__fields__', { })
-        fields |= namespace.fields
+        fields = ChainMap(*(getattr(base, '__fields__', { }) for base in reversed(bases)), namespace.fields)
         namespace['__fields__'] = fields = reorder(fields)
+        namespace['__match_args__'] = tuple(fields)
 
         if fields and '__init__' not in namespace:
             exec(init_source(fields), globals(), namespace)
